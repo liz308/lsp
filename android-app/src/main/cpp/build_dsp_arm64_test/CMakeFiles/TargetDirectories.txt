@@ -1,0 +1,3 @@
+/home/hilary/lsp/android-app/src/main/cpp/build_dsp_arm64_test/CMakeFiles/dsp_arm64_test.dir
+/home/hilary/lsp/android-app/src/main/cpp/build_dsp_arm64_test/CMakeFiles/edit_cache.dir
+/home/hilary/lsp/android-app/src/main/cpp/build_dsp_arm64_test/CMakeFiles/rebuild_cache.dir
