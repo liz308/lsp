@@ -1,0 +1,51 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (C) 2024 LSP Android Project
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+This project uses LSP (Linux Studio Plugins) which is licensed under
+the GNU Lesser General Public License (LGPL) version 3.
+
+LSP Plugins Copyright (C) 2020 Vladimir Sadovnikov
+https://lsp-plug.in/
+
+---
+
+THIRD-PARTY LICENSES:
+
+1. Oboe Audio Library
+   Copyright 2018 Google Inc.
+   Licensed under the Apache License, Version 2.0
+   https://github.com/google/oboe
+
+2. Jetpack Compose
+   Copyright 2021 The Android Open Source Project
+   Licensed under the Apache License, Version 2.0
+   https://developer.android.com/jetpack/compose
+
+3. Kotlin Standard Library
+   Copyright 2010-2023 JetBrains s.r.o. and Kotlin Programming Language contributors
+   Licensed under the Apache License, Version 2.0
+   https://kotlinlang.org/
+
+4. Material Design Components
+   Copyright 2021 The Android Open Source Project
+   Licensed under the Apache License, Version 2.0
+   https://material.io/
+
+For full license texts, see the LICENSES directory.

@@ -1,0 +1,5 @@
+/home/hilary/lsp/dsp-core/CMakeFiles/lsp_android_dsp_core.dir
+/home/hilary/lsp/dsp-core/CMakeFiles/lsp_eq_test_harness.dir
+/home/hilary/lsp/dsp-core/CMakeFiles/lsp_native_test_harness.dir
+/home/hilary/lsp/dsp-core/CMakeFiles/edit_cache.dir
+/home/hilary/lsp/dsp-core/CMakeFiles/rebuild_cache.dir

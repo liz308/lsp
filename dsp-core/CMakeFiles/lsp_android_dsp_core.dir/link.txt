@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -Wl,--dependency-file=CMakeFiles/lsp_android_dsp_core.dir/link.d -shared -Wl,-soname,liblsp_android_dsp_core.so -o liblsp_android_dsp_core.so CMakeFiles/lsp_android_dsp_core.dir/lsp_android_bridge.cpp.o
