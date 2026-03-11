@@ -93,3 +93,7 @@ Thumbs.db
 
 # Logs directory
 logs/
+
+# kubectl and other binaries
+kubectl
+kubectl.sha256
