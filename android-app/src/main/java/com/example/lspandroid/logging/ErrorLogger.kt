@@ -162,24 +162,34 @@ object ErrorLogger {
         private val filters = mutableListOf<LogFilter>()
         
         fun minLevel(level: LogLevel) = apply {
-            filters.add { it.level.priority >= level.priority }
+            filters.add(object : LogFilter {
+                override fun shouldLog(entry: LogEntry) = entry.level.priority >= level.priority
+            })
         }
         
         fun category(vararg categories: LogCategory) = apply {
             val categorySet = categories.toSet()
-            filters.add { it.category in categorySet }
+            filters.add(object : LogFilter {
+                override fun shouldLog(entry: LogEntry) = entry.category in categorySet
+            })
         }
         
         fun messageContains(text: String, ignoreCase: Boolean = true) = apply {
-            filters.add { it.message.contains(text, ignoreCase) }
+            filters.add(object : LogFilter {
+                override fun shouldLog(entry: LogEntry) = entry.message.contains(text, ignoreCase)
+            })
         }
         
         fun threadName(name: String) = apply {
-            filters.add { it.threadName == name }
+            filters.add(object : LogFilter {
+                override fun shouldLog(entry: LogEntry) = entry.threadName == name
+            })
         }
         
         fun timeRange(startTime: Long, endTime: Long) = apply {
-            filters.add { it.timestamp in startTime..endTime }
+            filters.add(object : LogFilter {
+                override fun shouldLog(entry: LogEntry) = entry.timestamp in startTime..endTime
+            })
         }
         
         fun build(): LogFilter = object : LogFilter {
@@ -331,16 +341,6 @@ object ErrorLogger {
             }
         }
         
-        when (entry.level) {
-            LogLevel.VERBOSE -> Log.v(tag, message, entry.throwable)
-            LogLevel.DEBUG -> Log.d(tag, message, entry.throwable)
-            LogLevel.INFO -> Log.i(tag, message, entry.throwable)
-            LogLevel.WARNING -> Log.w(tag, message, entry.throwable)
-            LogLevel.ERROR -> Log.e(tag, message, entry.throwable)
-            LogLevel.FATAL -> Log.wtf(tag, message, entry.throwable)
-        }
-    }
-    
     private fun startLogProcessor() {
         logScope.launch {
             val batch = mutableListOf<LogEntry>()
@@ -357,7 +357,7 @@ object ErrorLogger {
                         batch.clear()
                     } else {
                         // Check for timeout
-                        delay(100)
+                        kotlinx.coroutines.delay(100)
                         if (batch.isNotEmpty() && 
                             System.currentTimeMillis() - batch.first().timestamp > 1000) {
                             processBatch(batch.toList())
@@ -365,12 +365,12 @@ object ErrorLogger {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error in log processor", e)
+                    android.util.Log.e(TAG, "Error in log processor", e)
                 }
             }
         }
-    }
-    
+    }                       System.currentTimeMillis() - batch.first().timestamp > 1000) {
+                            processBatch(batch.toList())
     private suspend fun processBatch(entries: List<LogEntry>) {
         // Write to file
         writeToFile(entries)
@@ -380,18 +380,18 @@ object ErrorLogger {
             try {
                 remote.sendLogs(entries)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send logs remotely", e)
+                android.util.Log.e(TAG, "Failed to send logs remotely", e)
             }
         }
         
         // Check if log rotation is needed
         checkLogRotation()
-    }
-    
+    }   remoteLogger?.let { remote ->
+            try {
     private suspend fun writeToFile(entries: List<LogEntry>) {
         val logFile = currentLogFile ?: return
         
-        withContext(Dispatchers.IO) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 if (logFileWriter == null) {
                     logFileWriter = BufferedWriter(FileWriter(logFile, true))
@@ -411,7 +411,17 @@ object ErrorLogger {
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to write to log file", e)
+                android.util.Log.e(TAG, "Failed to write to log file", e)
+                // Try to recreate the writer
+                try {
+                    logFileWriter?.close()
+                    logFileWriter = BufferedWriter(FileWriter(logFile, true))
+                } catch (e2: Exception) {
+                    android.util.Log.e(TAG, "Failed to recreate log writer", e2)
+                }
+            }
+        }
+    }           Log.e(TAG, "Failed to write to log file", e)
                 // Try to recreate the writer
                 try {
                     logFileWriter?.close()
@@ -421,16 +431,6 @@ object ErrorLogger {
                 }
             }
         }
-    }
-    
-    private fun createNewLogFile() {
-        val dir = logDirectory ?: return
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        currentLogFile = File(dir, "lsp_android_$timestamp.log")
-        
-        // Close existing writer
-        logFileWriter?.close()
-        logFileWriter = null
     }
     
     private fun checkLogRotation() {
@@ -452,10 +452,10 @@ object ErrorLogger {
             // Clean up old files
             cleanupOldLogFiles()
         }
-    }
-    
+    }       logScope.launch {
+                compressLogFile(logFile)
     private suspend fun compressLogFile(file: File) {
-        withContext(Dispatchers.IO) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val compressedFile = File(file.parent, "${file.nameWithoutExtension}.log.gz")
                 
@@ -463,6 +463,16 @@ object ErrorLogger {
                     GZIPOutputStream(FileOutputStream(compressedFile)).use { output ->
                         input.copyTo(output)
                     }
+                }
+                
+                file.delete()
+                log(LogLevel.INFO, LogCategory.GENERAL, 
+                    "Compressed log file: ${compressedFile.name}")
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Failed to compress log file", e)
+            }
+        }
+    }               }
                 }
                 
                 file.delete()
@@ -478,38 +488,28 @@ object ErrorLogger {
         val dir = logDirectory ?: return
         
         val logFiles = dir.listFiles { _, name ->
-            name.startsWith("lsp_android_") && (name.endsWith(".log") || name.endsWith(".log.gz"))
-        }?.sortedByDescending { it.lastModified() }
-        
-        logFiles?.drop(MAX_LOG_FILES)?.forEach { file ->
-            if (file.delete()) {
-                log(LogLevel.INFO, LogCategory.GENERAL, "Deleted old log file: ${file.name}")
-            }
-        }
-    }
-    
     private fun handleCriticalError(entry: LogEntry) {
         // Force flush current logs
         logFileWriter?.flush()
         
         // Report crash if configured
         crashReporter?.let { reporter ->
-        entry.throwable?.let { throwable ->
+            entry.throwable?.let { throwable ->
                 val context = mapOf(
                     "category" to entry.category.name,
                     "message" to entry.message,
                     "timestamp" to entry.timestamp,
                     "threadName" to entry.threadName,
                     "metadata" to entry.metadata
-        )
+                )
                 reporter.reportCrash(throwable, context)
-    }
-}
+            }
+        }
 
         // Create crash dump
         createCrashDump(entry)
-    }
-    
+    }               "timestamp" to entry.timestamp,
+                    "threadName" to entry.threadName,
     private fun createCrashDump(entry: LogEntry) {
         val dir = logDirectory ?: return
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date(entry.timestamp))
@@ -534,7 +534,7 @@ object ErrorLogger {
                 
                 entry.throwable?.let { throwable ->
                     writer.write("\nStack Trace:\n")
-                    writer.write(Log.getStackTraceString(throwable))
+                    writer.write(android.util.Log.getStackTraceString(throwable))
                 }
                 
                 writer.write("\n=== RECENT LOGS ===\n")
@@ -547,17 +547,27 @@ object ErrorLogger {
                 writer.write(getSystemInfo())
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create crash dump", e)
+            android.util.Log.e(TAG, "Failed to create crash dump", e)
         }
-    }
-    
-    private fun logSystemInfo() {
-        val info = getSystemInfo()
-        log(LogLevel.INFO, LogCategory.GENERAL, "System Info:\n$info")
-    }
-    
+    }               writer.write(formatLogEntry(logEntry))
+                    writer.write("\n")
+                }
+                
+                writer.write("\n=== SYSTEM INFO ===\n")
+                writer.write(getSystemInfo())
+            }
     private fun getSystemInfo(): String {
         return buildString {
+            append("Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\n")
+            append("Android: ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})\n")
+            append("Architecture: ${android.os.Build.SUPPORTED_ABIS.joinToString()}\n")
+            append("Memory: ${getMemoryInfo()}\n")
+            append("Processors: ${Runtime.getRuntime().availableProcessors()}\n")
+            append("App Version: ${getAppVersion()}\n")
+            append("Process ID: ${android.os.Process.myPid()}\n")
+            append("Thread Count: ${Thread.activeCount()}\n")
+        }
+    }   return buildString {
             append("Device: ${Build.MANUFACTURER} ${Build.MODEL}\n")
             append("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
             append("Architecture: ${Build.SUPPORTED_ABIS.joinToString()}\n")
@@ -579,26 +589,26 @@ object ErrorLogger {
         return "${usedMemory}MB used / ${maxMemory}MB max"
     }
     
-    private fun getAppVersion(): String {
-        return try {
-            val packageInfo = android.app.Application().packageManager
-                .getPackageInfo(android.app.Application().packageName, 0)
-            "${packageInfo.versionName} (${packageInfo.versionCode})"
-        } catch (e: Exception) {
-            "Unknown"
-        }
-    }
-    
     private fun setupMemoryMonitoring() {
         logScope.launch {
             while (true) {
-                delay(30000) // Check every 30 seconds
+                kotlinx.coroutines.delay(30000) // Check every 30 seconds
                 
                 val runtime = Runtime.getRuntime()
                 val usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
                 
                 if (usedMemory > MEMORY_THRESHOLD_MB) {
                     log(LogLevel.WARNING, LogCategory.MEMORY,
+                        "High memory usage detected: ${usedMemory}MB")
+                    
+                    // Trim log queue if memory is high
+                    while (logQueue.size > MAX_LOG_ENTRIES / 2) {
+                        logQueue.poll()
+                    }
+                }
+            }
+        }
+    }               log(LogLevel.WARNING, LogCategory.MEMORY,
                         "High memory usage detected: ${usedMemory}MB")
                     
                     // Trim log queue if memory is high
